@@ -1,8 +1,10 @@
-# GFT data migration pipeline — script & layer map
+# GFT data migration pipeline — reference implementation map
 
-Maps the **PlantUML sequence** (Migration Orchestrator → Step Functions → Glue → Iceberg → Lambda/Athena → ThoughtMachine) to code under `data-migration-infra-main/`.
+Maps code under `data-migration-infra-main/` from **one GFT program** (PostgreSQL staging → S3 → Glue → Iceberg → Lambda/Athena → ThoughtMachine).
 
-> Portfolio snapshot — UAT bucket/account names appear in Glue scripts; treat as non-production placeholders.
+This is **not** the generic APAC pattern documented in the [README](../README.md) (T24/Finacle/FLEXCUBE → S3 → TM → Redshift/MSK). Use it as a **deep-dive sample** when Step Functions + Iceberg migration DB apply.
+
+> Portfolio snapshot — UAT bucket/account names in Glue scripts are placeholders.
 
 ## Data layers
 

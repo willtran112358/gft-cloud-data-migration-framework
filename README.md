@@ -1,244 +1,197 @@
 # GFT Cloud Data Migration Framework
 
-> **GFT** implements **ThoughtMachine Vault** for **APAC banks** replacing legacy cores (**T24**, **Finacle**, **FLEXCUBE**). This repo includes the **portfolio Python toolkit** (`extractor`, `validator`) and the **`data-migration-infra-main`** snapshot: production-style **AWS Step Functions**, **Glue**, **Iceberg**, **Athena**, **Lambda**, and **EKS** producers used on a live migration program.
+> **GFT** delivers **ThoughtMachine Vault** programs for **APAC banks** replacing legacy cores. The **reference architecture** below is the industry pattern GFT uses across the region: **legacy extract → S3 landing → TM mapping & load → AWS analytics & cutover**. The folder `data-migration-infra-main/` is one **program implementation** (Glue, Step Functions, Iceberg) — useful as a code sample, not the only valid design for every APAC bank.
 
-**Portfolio reconstruction** — no GFT, ThoughtMachine, or bank customer data. UAT resource names in Glue scripts are placeholders.
+**Portfolio reconstruction** — no GFT, ThoughtMachine, or customer data.
 
-## What’s in this repo
-
-| Area | Location | Role |
-|------|----------|------|
-| **Infra (Terraform)** | `data-migration-infra-main/infra/` | VPC, S3 raw/staging, Glue jobs, Step Functions, Lambda recon |
-| **Glue / Lambda ETL** | `data-migration-infra-main/infra/data-etl/python/` | Extract, raw→staging, staging→migration+DQ |
-| **TM load (K8s)** | `data-migration-infra-main/backend/dataLoader/` | Kafka producers after migration DB validated |
-| **Python toolkit** | `extractor.py`, `validator.py`, `connector_base.py` | Legacy→S3 extract & validation patterns |
-| **Pipeline map** | [docs/gft_migration_pipeline.md](docs/gft_migration_pipeline.md) | Script names ↔ migration phases |
-
-## End-to-end flow (GFT delivery)
+## End-to-end flow (APAC standard)
 
 | Phase | What happens | Outcome |
 |-------|----------------|--------|
-| **1. Extract** | **PostgreSQL** (migration staging DB) → Glue `glue-job-postgres-to-s3-args.py` → **S3 raw** Parquet | Authoritative snapshots per table |
-| **2. Raw → staging** | Glue `sa-*`, `ca-*`, `customer-*`, `loan-*` raw-to-staging jobs → **Glue Catalog** `ext_staging.*` | Conformed account, posting, customer, deposit, loan |
-| **3. Staging → migration + DQ** | `*-job-staging-migrationdb.py` + Glue DQ; fails → `dq_fails`; pass → **Iceberg** `ext_migration.*` | TM-ready migration tables |
-| **4. Reconciliation** | Lambda + **Athena** compare raw / staging / migration; `sf_global_reconciliation` | Sign-off metrics in log tables |
-| **5. ThoughtMachine load** | TM ID matchers + **EKS** Kafka producers → **ThoughtMachine Vault** | Migration complete |
+| **1. Legacy extract** | Bank **legacy core** exports GL, contracts, customers, balances to **S3** landing (COB / batch) | Raw legacy zone (`s3://…/legacy/`) |
+| **2. TM mapping & load** | **Glue** (or batch) transforms legacy → **ThoughtMachine Vault** schema; GFT mapping packs; bulk/API load | Vault populated — accounts, contracts, postings |
+| **3. AWS analytics & cutover** | TM **API/CDC** + legacy S3 → medallion lake → **Redshift**; **MSK** events; **QuickSight** sign-off | Parity reports, reconciliation, legacy decommission |
 
-Legacy cores land in PostgreSQL (or S3) first; **ThoughtMachine** is the target after the migration DB passes DQ and recon — then AWS analytics (Redshift / QuickSight) can run in parallel.
+ThoughtMachine is **not** the first hop from the old core. Legacy lands on **S3** first; only after mapping/load does Vault hold production-shaped CBS data.
+
+## APAC legacy core banking (typical sources)
+
+| Core | Vendor / footprint | Typical extract entities |
+|------|-------------------|---------------------------|
+| **Temenos T24 / Transact** | Widely used AU, NZ, SEA, India | `CUSTOMER`, AA arrangements, `STMT_ENTRY`, GL, COB snapshots |
+| **Finacle** | Infosys — common India, PH, MY, VN partners | CIF, account master, transactions, GL |
+| **Oracle FLEXCUBE** | Universal banking, Islamic variants | Customer, account, collateral, GL |
+| **Temenos Triple A / Wealth** | Wealth-heavy APAC programs | Portfolio, positions (alongside T24) |
+| **Finastra / Misys** | Selected AU & regional installs | Lending, treasury feeds |
+| **In-house / vendor CBS** | Smaller regional banks | File-based COB exports → same S3 contract |
+
+Banks usually migrate **one** primary core per program. GFT standardizes extracts into a **common S3 layout** (partition by COB date, source system, entity) before **ThoughtMachine-specific** mapping.
+
+> **Note:** `data-migration-infra-main/` uses a **PostgreSQL staging DB + Iceberg migration layer** pattern from a **single European-program** snapshot. APAC programs (e.g. T24 COB → S3 directly) often **skip** that hop — see [docs/gft_migration_pipeline.md](docs/gft_migration_pipeline.md) for script-level detail only.
 
 ## Architecture diagrams
 
-### 1 · Program overview
+### 1 · Three-phase program (overview)
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '18px'}}}%%
 flowchart LR
-    ORCH["🎯 Migration<br/>Orchestrator"]
-    SF["⚙️ AWS Step Functions<br/>sf_global_migration"]
-    TM["🏦 ThoughtMachine<br/>Vault CBS"]
+    P1["Phase 1<br/>🏦 Legacy cores<br/>T24 • Finacle • FLEXCUBE"]
+    P2["Phase 2<br/>☁️ S3 + Glue<br/>TM mapping & load"]
+    P3["Phase 3<br/>📊 AWS lake<br/>Recon & cutover"]
 
-    ORCH -->|"StartExecution"| SF
-    SF -->|"Load confirmed"| TM
-    SF -->|"Metrics & recon"| ORCH
+    P1 -->|"COB extracts"| P2
+    P2 -->|"Vault go-live data"| P3
 
-    style ORCH fill:#FFF9C4,stroke:#F9A825,stroke-width:3px
-    style SF fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px
-    style TM fill:#C8E6C9,stroke:#2E7D32,stroke-width:3px
+    style P1 fill:#FFCDD2,stroke:#C62828,stroke-width:3px,color:#4a0000
+    style P2 fill:#FFF9C4,stroke:#F9A825,stroke-width:3px,color:#4a4000
+    style P3 fill:#C8E6C9,stroke:#2E7D32,stroke-width:3px,color:#1b3d1b
 ```
 
-### 2 · Phase 1–2 — Extract & raw → staging
+### 2 · Phase 1 — Legacy extract to S3
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '17px'}}}%%
 flowchart TD
-    subgraph SRC["📥 Source"]
-        PG["PostgreSQL<br/>migration staging DB"]
-    end
-
-    subgraph ORCH["🎛️ Orchestration"]
-        SF1["Step Functions<br/>per-entity pipelines"]
-        GL0["Glue<br/>glue-job-postgres-to-s3-args.py"]
-    end
-
-    subgraph RAW["🪣 S3 raw zone"]
-        S3R["Parquet<br/>partitioned extracts"]
-    end
-
-    subgraph STG["📋 Glue Catalog — staging"]
+    subgraph LEGACY["🏦 Legacy cores (on-prem / hosted)"]
         direction LR
-        ACC["ext_staging.account"]
-        CUS["ext_staging.customer"]
-        PIB["ext_staging.posting"]
+        T24["Temenos T24<br/>Transact"]
+        FIN["Finacle"]
+        FC["FLEXCUBE"]
+        OTH["Other CBS<br/>files / DB"]
     end
 
-    subgraph JOBS["Glue raw → staging"]
+    subgraph EXTRACT["📥 Extract patterns"]
         direction LR
-        SA["sa-account-job-raw-to-staging"]
-        SP["sa-posting-job-raw-to-staging"]
-        CU["customer-raw-to-staging"]
+        COB["COB batch<br/>JDBC / files"]
+        API["API / CDC<br/>where available"]
     end
 
-    PG --> GL0
-    SF1 --> GL0
-    GL0 --> S3R
-    S3R --> SA & SP & CU
-    SA --> ACC
-    SP --> PIB
-    CU --> CUS
+    subgraph LAND["🪣 S3 legacy landing"]
+        BRZ["Bronze zone<br/>Parquet • COB partitions"]
+        MAN["Manifest<br/>row counts • checksums"]
+    end
 
-    style SRC fill:#FFE0B2,stroke:#E65100,stroke-width:2px
-    style RAW fill:#BBDEFB,stroke:#1565C0,stroke-width:3px
-    style STG fill:#C5CAE9,stroke:#303F9F,stroke-width:3px
-    style ORCH fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px
+    T24 & FIN & FC & OTH --> COB & API
+    COB & API --> BRZ
+    BRZ --> MAN
+
+    style LEGACY fill:#FFEBEE,stroke:#C62828,stroke-width:3px
+    style EXTRACT fill:#FFE0B2,stroke:#E65100,stroke-width:2px
+    style LAND fill:#BBDEFB,stroke:#1565C0,stroke-width:3px
 ```
 
-### 3 · Phase 3 — Staging → migration + data quality
+### 3 · Phase 2 — S3 → ThoughtMachine Vault
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '17px'}}}%%
 flowchart TD
-    subgraph IN["📋 Staging tables"]
-        STG["ext_staging.*"]
+    subgraph S3["🪣 S3 legacy bronze"]
+        RAW["Partitioned extracts<br/>per core / COB date"]
     end
 
-    subgraph GLUE["⚗️ Glue + DQ"]
-        MIG["*-job-staging-migrationdb.py"]
-        DQ["EvaluateDataQuality<br/>completeness • uniqueness"]
-        DQO["*-job-dq-only.py"]
+    subgraph ETL["⚙️ Transform & validate"]
+        direction LR
+        GLUE["AWS Glue / Spark<br/>GFT mapping packs"]
+        VAL["validator.py<br/>row • schema • rules"]
+        QUAR["Quarantine prefix<br/>failed rows"]
     end
 
-    subgraph OUT["💾 Outputs"]
-        ICE["Iceberg ext_migration.*<br/>S3-backed migration DB"]
-        FAIL["dq_fails table"]
+    subgraph TM["🏦 ThoughtMachine Vault"]
+        direction LR
+        MAP["Customer • Contract<br/>Balance • Posting"]
+        LOAD["Bulk ingest / API"]
     end
 
-  subgraph SF["Step Functions"]
-    SFDQ["sf_all_entities_dq_only"]
-  end
+    RAW --> GLUE
+    GLUE --> VAL
+    VAL -->|"pass"| MAP
+    VAL -->|"fail"| QUAR
+    MAP --> LOAD
 
-    STG --> MIG
-    STG --> DQO
-    MIG --> DQ
-    DQ -->|"pass"| ICE
-    DQ -->|"fail"| FAIL
-    SFDQ -.-> MIG
-
-    style IN fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
-    style GLUE fill:#FFF9C4,stroke:#F9A825,stroke-width:2px
-    style OUT fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style SF fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
+    style S3 fill:#BBDEFB,stroke:#1565C0,stroke-width:2px
+    style ETL fill:#FFF9C4,stroke:#F9A825,stroke-width:2px
+    style TM fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
 ```
 
-### 4 · Phase 4–5 — Reconciliation & ThoughtMachine load
+### 4 · Phase 3 — AWS data platform & cutover
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '17px'}}}%%
 flowchart TD
-    subgraph RECON["✅ Reconciliation"]
+    subgraph SOURCES["📡 Ongoing feeds"]
         direction LR
-        L1["Lambda<br/>raw ↔ staging"]
-        L2["Lambda<br/>staging ↔ migration"]
-        ATH["Amazon Athena<br/>SQL counts & IDs"]
-        LOG["Metrics log table"]
+        TMAPI["ThoughtMachine<br/>API / CDC"]
+        LEG["S3 legacy<br/>parity snapshots"]
     end
 
-    subgraph MATCH["🔗 TM matching"]
-        JM["Glue TM ID matchers<br/>account • posting"]
+    subgraph LAKE["🏅 Medallion lake"]
+        direction LR
+        SIL["Silver<br/>conformed"]
+        GLD["Gold<br/>GL • regulatory"]
     end
 
-    subgraph LOAD["🚀 Load"]
-        EKS["EKS dataLoader<br/>Kafka producers"]
-        TM["ThoughtMachine Vault"]
+    subgraph AWS["☁️ AWS services"]
+        direction LR
+        MSK["Amazon MSK<br/>events"]
+        GL["Glue ETL"]
+        RS["Redshift<br/>migration DWH"]
     end
 
-    ICE["Iceberg migration DB"] --> L2
-    STG2["Staging tables"] --> L1
-    L1 & L2 --> ATH --> LOG
-    ICE --> JM --> EKS --> TM
+    subgraph OUT["📊 Consumption & controls"]
+        direction LR
+        RECON["Reconciliation<br/>Legacy ↔ TM ↔ DWH"]
+        QS["QuickSight<br/>cutover dashboards"]
+    end
 
-    style RECON fill:#F8BBD0,stroke:#C2185B,stroke-width:3px
-    style MATCH fill:#B2DFDB,stroke:#00695C,stroke-width:2px
-    style LOAD fill:#DCEDC8,stroke:#558B2F,stroke-width:3px
+    TMAPI --> MSK
+    TMAPI --> SIL
+    LEG --> SIL
+    MSK --> GL
+    SIL --> GL --> GLD --> RS
+    RS --> RECON & QS
+    TMAPI -.-> RECON
+
+    style SOURCES fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
+    style LAKE fill:#B3E5FC,stroke:#0277BD,stroke-width:2px
+    style AWS fill:#E0E0E0,stroke:#424242,stroke-width:2px
+    style OUT fill:#DCEDC8,stroke:#558B2F,stroke-width:3px
 ```
 
-### 5 · Sequence view (matches PlantUML)
+## AWS data stack (Phase 3)
 
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '16px'}}}%%
-sequenceDiagram
-    autonumber
-    participant O as Migration Orchestrator
-    participant SF as Step Functions
-    participant PG as PostgreSQL
-    participant G as AWS Glue
-    participant S3 as S3 Raw
-    participant ST as Glue Staging
-    participant ICE as Iceberg Migration
-    participant L as Lambda
-    participant A as Athena
-    participant TM as ThoughtMachine
+| Service | Role |
+|---------|------|
+| **S3** | Legacy landing + medallion zones; Parquet; partition by COB / source |
+| **Glue** | Legacy→TM transforms; crawlers; ongoing lake ETL |
+| **Redshift** | Migration warehouse; GL facts; parity vs legacy |
+| **MSK** | CDC / payment events after TM go-live |
+| **QuickSight** | Cutover dashboards, recon sign-off |
+| **IAM / KMS** | Least privilege; encryption at rest |
 
-    O->>SF: Start migration job
-    SF->>G: glue-job-postgres-to-s3-args.py
-    G->>PG: JDBC extract
-    PG-->>G: chunks
-    G->>S3: Parquet files
+_Optional on specific programs:_ Step Functions, Iceberg migration DB, Athena recon — see `data-migration-infra-main/`._
 
-    SF->>G: sa-account / sa-posting raw-to-staging
-    G->>S3: read
-    G->>ST: ext_staging.*
+## Key features (this repo)
 
-    SF->>G: *-staging-migrationdb + DQ
-    G->>ST: read
-    G->>ICE: pass rows
-    G->>ST: dq_fails
-
-    SF->>L: reconciliation Lambdas
-    L->>A: query counts / IDs
-    A-->>L: results
-    L->>A: log metrics
-
-    SF->>TM: load from migration DB
-    TM-->>SF: OK
-    SF-->>O: Migration complete
-```
-
-## Legacy cores → AWS (bank context)
-
-| Core | Typical role in program |
-|------|-------------------------|
-| **Temenos T24** | COB tables, AA contracts, GL |
-| **Finacle** | CIF, accounts, transactions |
-| **FLEXCUBE** | Customer, account, collateral |
-
-Extracts are normalized into the **migration PostgreSQL / S3 raw** layout before TM mapping — see [docs/migration_phases.md](docs/migration_phases.md).
-
-## AWS stack
-
-| Service | Role in `data-migration-infra-main` |
-|---------|-------------------------------------|
-| **Step Functions** | `sf_global_migration`, per-entity `*_raw_to_migration`, DQ, recon |
-| **Glue** | JDBC extract, Spark transforms, Glue DQ, Iceberg writes |
-| **S3** | Raw + staging warehouse paths |
-| **Glue Catalog** | `ext_staging`, `ext_migration`, `dq_fails` |
-| **Iceberg** | Migration DB tables on S3 |
-| **Lambda + Athena** | Reconciliation & metrics |
-| **EKS** | dataLoader producers to ThoughtMachine |
-| **Terraform** | `infra/data-etl`, `networking`, `eks` |
+| Feature | Location |
+|---------|----------|
+| **Legacy extractors** | `extractor.py`, `connector_base.py` — T24 / Finacle / Flexcube-style patterns |
+| **Validation** | `validator.py` — row counts, schema checks |
+| **TM mapping packs** | Documented in [docs/migration_phases.md](docs/migration_phases.md) |
+| **Reference infra** | `data-migration-infra-main/` — Glue, Step Functions, Lambda (one program) |
+| **Pipeline script map** | [docs/gft_migration_pipeline.md](docs/gft_migration_pipeline.md) |
 
 ## Project layout
 
 ```
 gft-cloud-data-migration-framework/
-├── data-migration-infra-main/     # Terraform + Glue + SF + backend (GFT program)
-│   ├── infra/data-etl/python/    # Glue & Lambda scripts
-│   └── backend/dataLoader/        # TM Kafka producers
 ├── connector_base.py
 ├── extractor.py
 ├── validator.py
+├── data-migration-infra-main/   # Optional: Terraform + Glue reference (one program)
 └── docs/
-    ├── migration_phases.md        # Legacy → TM → AWS phases
-    └── gft_migration_pipeline.md  # Script ↔ layer map
+    ├── migration_phases.md
+    └── gft_migration_pipeline.md
 ```
 
 ## Quick start
@@ -247,12 +200,11 @@ gft-cloud-data-migration-framework/
 git clone https://github.com/willtran112358/gft-cloud-data-migration-framework.git
 cd gft-cloud-data-migration-framework
 python -m venv .venv
-# Windows
-.venv\Scripts\activate
+.venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 ```
 
-Explore infra: `cd data-migration-infra-main/infra/data-etl && type README.md`
+See [docs/migration_phases.md](docs/migration_phases.md) for legacy→TM mapping examples.
 
 ---
 

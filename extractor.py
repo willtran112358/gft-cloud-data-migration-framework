@@ -1,4 +1,4 @@
-"""Full table data extraction"""
+"""Batch table extraction from legacy core sources to S3 landing (phase 1 migration)."""
 
 from typing import Any, Dict, List
 

@@ -1,4 +1,4 @@
-"""Base connector abstraction for data sources"""
+"""Base connector for legacy core banking sources (T24, Finacle, Flexcube) and file/S3 targets."""
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional

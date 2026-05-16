@@ -3,9 +3,9 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cloud-data-migration-framework"
+name = "gft-cloud-data-migration-framework"
 version = "1.0.0"
-description = "Enterprise-grade data migration, ETL, and integration platform"
+description = "GFT APAC ThoughtMachine core migration — AWS Glue, Redshift, MSK, S3, QuickSight"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}

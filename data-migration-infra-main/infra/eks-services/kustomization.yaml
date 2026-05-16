@@ -1,0 +1,139 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- dataloader-deployments/consumers.yaml
+- dataloader-deployments/producer.yaml
+- dataloader-deployments/reconciliator-api.yaml
+- dataloader-deployments/sa.yaml
+- dataloader-deployments/service.yaml
+
+- global-reconciliator/global-reconciliator-account.yaml
+- global-reconciliator/global-reconciliator-customer.yaml
+- global-reconciliator/global-reconciliator-deposit.yaml
+- global-reconciliator/global-reconciliator-loan.yaml
+- global-reconciliator/global-reconciliator-posting.yaml
+
+images:
+- name: dl-consumers
+  newName: 377860792308.dkr.ecr.ap-southeast-1.amazonaws.com/ecr-apse1-cicdhdbank/uat/data-migration-infra.dl-consumers 
+  newTag: latest
+- name: dl-posting-p
+  newName: 377860792308.dkr.ecr.ap-southeast-1.amazonaws.com/ecr-apse1-cicdhdbank/uat/data-migration-infra.dl-posting-p
+  newTag: latest
+- name: reconciliator-api
+  newName: 377860792308.dkr.ecr.ap-southeast-1.amazonaws.com/ecr-apse1-cicdhdbank/uat/data-migration-infra.reconciliator-api
+  newTag: latest
+- name: global-reconciliator-api
+  newName: 377860792308.dkr.ecr.ap-southeast-1.amazonaws.com/ecr-apse1-cicdhdbank/uat/data-migration-infra.global-reconciliator-api
+  newTag: latest
+
+patches:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: ".*"
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: BOOTSTRAP_SERVER
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: bootstrap_server
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: SECURITY_PROTOCOL
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: security_protocol
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: SASL_MECHANISM
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: sasl_mechanism
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: SASL_USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: sasl_username
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: SASL_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: sasl_password
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: S3_BUCKET
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: s3_bucket
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: DATABASE_NAME
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: database_name
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: REGION_NAME
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: region_name
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: WORKGROUP
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: workgroup
+- target:
+    group: batch
+    version: v1
+    kind: Job
+    name: ".*"
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: DATABASE_NAME
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: database_name
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: REGION_NAME
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: region_name
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: WORKGROUP
+        valueFrom:
+          secretKeyRef:
+            name: data-migration
+            key: workgroup

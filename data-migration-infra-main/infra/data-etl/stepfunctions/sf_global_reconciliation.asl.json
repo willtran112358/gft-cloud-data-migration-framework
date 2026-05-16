@@ -1,0 +1,240 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Parallel",
+  "States": {
+    "Parallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "EKS delete customer job",
+          "States": {
+            "EKS delete customer job": {
+              "Catch": [
+                {
+                  "Comment": "eks job doesn't exist",
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "Next": "Run Global Reconciliation Customer"
+                }
+              ],
+              "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJQTR4bHRySTdUczh3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBMU1UY3hNVEU1TVRaYUZ3MHpOREExTVRVeE1USTBNVFphTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUM5TjBCanZlRW9YN2d0UDkzSktuUm9JYm9IbE5YMSsxTHZjUVJlVmpkbzVXMmxtT3kyZWk1c0pXenIKUVp3Yjh3dEtOTVFtT05sbFdtZDJwbmlLSzBjWjZDZkdnU29TWDA5UzVFMUdER3FwZFRFMWhVK09NSE1NTmVoMApJS2hLdWp3djl0MWlMaDNZcFZyZ0Zja2xBZndaSnV5T0hhRmtweTZlcXl3V0E5VU1DT054ZDArbUpoQTJFTXN3ClFBaE5qK3BsYWNqVCtLV0R3VklsUEFXTlUyeS9uWlJlRm9BU3dFZkFIa2hIR3FyeUo2Y2VJU0orYUxjNUc0WVgKd0k3WjlYeDgyT3RKR0ZlRzg3V2NPMFljTzB6NitpKzA0d0p6WGZodDlUSnc4bnV4QklPRlYvMVdIM2t4eGdSUAphcEUxZVZhblByM0pVN2lBY2pzRTdUeTVCcDA3QWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRWEhzQW5vcENsaFVLeG8zbklKZ2JoMnUxSGpqQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQXRBZHBsUjB2ZgpSWW9UQ08zM0F5dU1UcjdYOVQrYnBxTEFXMmU4ZWNkVVpYRHNTTlkzNmF3OTZCYi8zSERLK2JWcm5HTGRmUnhPCmZZbG5EbXp5UEVheUlKalUwZ1A2MnhvaWJLMEdzV2x2eEtzR3ZqZW50THlEZkg0LzBrZGJjRlJzSExGdHFTVlYKVHVkNTV4QVlhUTlEelZmUUR6eHBKNXBUMVBvVEdBemU1aEowdnV6STBtYXBGSHRtWnVyQUdPc2p6aW9ONUpzSApoc1c2azdHYzFRQkJKM0dQMzBjZGwvVUlNZjhhM0ZjQU5CWXNLOFVUazFNcWJ3ZDVib0dqQm5zRXlhdmF6Vm5zCmtCbFptN09qUWdxWEFBaVVJMTNnak9GNHg4Vi9NYlRpWlZ6YSttakZJOGRJZHJrVVVPK0t3aVluOGc4SExKc00KR2ZkNmlMM0RYNDFZCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "data-migration",
+                "Endpoint": "${eks_endpoint}",
+                "Method": "DELETE",
+                "Path": "/apis/batch/v1/namespaces/dataloader/jobs/global-reconciliator-customer",
+                "QueryParameters": {
+                  "propagationPolicy": [
+                    "Foreground"
+                  ]
+                }
+              },
+              "Resource": "arn:aws:states:::eks:call",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "Next": "Run Global Reconciliation Customer"
+            },
+            "Run Global Reconciliation Customer": {
+              "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJQTR4bHRySTdUczh3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBMU1UY3hNVEU1TVRaYUZ3MHpOREExTVRVeE1USTBNVFphTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUM5TjBCanZlRW9YN2d0UDkzSktuUm9JYm9IbE5YMSsxTHZjUVJlVmpkbzVXMmxtT3kyZWk1c0pXenIKUVp3Yjh3dEtOTVFtT05sbFdtZDJwbmlLSzBjWjZDZkdnU29TWDA5UzVFMUdER3FwZFRFMWhVK09NSE1NTmVoMApJS2hLdWp3djl0MWlMaDNZcFZyZ0Zja2xBZndaSnV5T0hhRmtweTZlcXl3V0E5VU1DT054ZDArbUpoQTJFTXN3ClFBaE5qK3BsYWNqVCtLV0R3VklsUEFXTlUyeS9uWlJlRm9BU3dFZkFIa2hIR3FyeUo2Y2VJU0orYUxjNUc0WVgKd0k3WjlYeDgyT3RKR0ZlRzg3V2NPMFljTzB6NitpKzA0d0p6WGZodDlUSnc4bnV4QklPRlYvMVdIM2t4eGdSUAphcEUxZVZhblByM0pVN2lBY2pzRTdUeTVCcDA3QWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRWEhzQW5vcENsaFVLeG8zbklKZ2JoMnUxSGpqQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQXRBZHBsUjB2ZgpSWW9UQ08zM0F5dU1UcjdYOVQrYnBxTEFXMmU4ZWNkVVpYRHNTTlkzNmF3OTZCYi8zSERLK2JWcm5HTGRmUnhPCmZZbG5EbXp5UEVheUlKalUwZ1A2MnhvaWJLMEdzV2x2eEtzR3ZqZW50THlEZkg0LzBrZGJjRlJzSExGdHFTVlYKVHVkNTV4QVlhUTlEelZmUUR6eHBKNXBUMVBvVEdBemU1aEowdnV6STBtYXBGSHRtWnVyQUdPc2p6aW9ONUpzSApoc1c2azdHYzFRQkJKM0dQMzBjZGwvVUlNZjhhM0ZjQU5CWXNLOFVUazFNcWJ3ZDVib0dqQm5zRXlhdmF6Vm5zCmtCbFptN09qUWdxWEFBaVVJMTNnak9GNHg4Vi9NYlRpWlZ6YSttakZJOGRJZHJrVVVPK0t3aVluOGc4SExKc00KR2ZkNmlMM0RYNDFZCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "data-migration",
+                "Endpoint": "${eks_endpoint}",
+                "Job": {
+                  "apiVersion": "batch/v1",
+                  "kind": "Job",
+                  "metadata": {
+                    "name": "global-reconciliator-customer",
+                    "namespace": "dataloader"
+                  },
+                  "spec": {
+                    "template": {
+                      "spec": {
+                        "serviceAccountName": "data-migration-services",
+                        "containers": [
+                          {
+                            "name": "global-reconciliator-customer",
+                            "image": "${global_reconciliation_image}",
+                            "env": [
+                              {
+                                "name": "ENTITY",
+                                "value": "customer"
+                              }
+                            ]
+                          }
+                        ],
+                        "nodeSelector": {
+                          "eks.amazonaws.com/nodegroup": "private-nodes"
+                        },
+                        "restartPolicy": "Never"
+                      }
+                    },
+                    "backoffLimit": 0
+                  }
+                },
+                "Namespace": "dataloader"
+              },
+              "Resource": "arn:aws:states:::eks:runJob.sync",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "EKS delete account job",
+          "States": {
+            "EKS delete account job": {
+              "Catch": [
+                {
+                  "Comment": "eks job doesn't exist",
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "Next": "Run Global Reconciliation Account"
+                }
+              ],
+              "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJQTR4bHRySTdUczh3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBMU1UY3hNVEU1TVRaYUZ3MHpOREExTVRVeE1USTBNVFphTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUM5TjBCanZlRW9YN2d0UDkzSktuUm9JYm9IbE5YMSsxTHZjUVJlVmpkbzVXMmxtT3kyZWk1c0pXenIKUVp3Yjh3dEtOTVFtT05sbFdtZDJwbmlLSzBjWjZDZkdnU29TWDA5UzVFMUdER3FwZFRFMWhVK09NSE1NTmVoMApJS2hLdWp3djl0MWlMaDNZcFZyZ0Zja2xBZndaSnV5T0hhRmtweTZlcXl3V0E5VU1DT054ZDArbUpoQTJFTXN3ClFBaE5qK3BsYWNqVCtLV0R3VklsUEFXTlUyeS9uWlJlRm9BU3dFZkFIa2hIR3FyeUo2Y2VJU0orYUxjNUc0WVgKd0k3WjlYeDgyT3RKR0ZlRzg3V2NPMFljTzB6NitpKzA0d0p6WGZodDlUSnc4bnV4QklPRlYvMVdIM2t4eGdSUAphcEUxZVZhblByM0pVN2lBY2pzRTdUeTVCcDA3QWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRWEhzQW5vcENsaFVLeG8zbklKZ2JoMnUxSGpqQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQXRBZHBsUjB2ZgpSWW9UQ08zM0F5dU1UcjdYOVQrYnBxTEFXMmU4ZWNkVVpYRHNTTlkzNmF3OTZCYi8zSERLK2JWcm5HTGRmUnhPCmZZbG5EbXp5UEVheUlKalUwZ1A2MnhvaWJLMEdzV2x2eEtzR3ZqZW50THlEZkg0LzBrZGJjRlJzSExGdHFTVlYKVHVkNTV4QVlhUTlEelZmUUR6eHBKNXBUMVBvVEdBemU1aEowdnV6STBtYXBGSHRtWnVyQUdPc2p6aW9ONUpzSApoc1c2azdHYzFRQkJKM0dQMzBjZGwvVUlNZjhhM0ZjQU5CWXNLOFVUazFNcWJ3ZDVib0dqQm5zRXlhdmF6Vm5zCmtCbFptN09qUWdxWEFBaVVJMTNnak9GNHg4Vi9NYlRpWlZ6YSttakZJOGRJZHJrVVVPK0t3aVluOGc4SExKc00KR2ZkNmlMM0RYNDFZCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "data-migration",
+                "Endpoint": "${eks_endpoint}",
+                "Method": "DELETE",
+                "Path": "/apis/batch/v1/namespaces/dataloader/jobs/global-reconciliator-account",
+                "QueryParameters": {
+                  "propagationPolicy": [
+                    "Foreground"
+                  ]
+                }
+              },
+              "Resource": "arn:aws:states:::eks:call",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "Next": "Run Global Reconciliation Account"
+            },
+            "Run Global Reconciliation Account": {
+              "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJQTR4bHRySTdUczh3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBMU1UY3hNVEU1TVRaYUZ3MHpOREExTVRVeE1USTBNVFphTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUM5TjBCanZlRW9YN2d0UDkzSktuUm9JYm9IbE5YMSsxTHZjUVJlVmpkbzVXMmxtT3kyZWk1c0pXenIKUVp3Yjh3dEtOTVFtT05sbFdtZDJwbmlLSzBjWjZDZkdnU29TWDA5UzVFMUdER3FwZFRFMWhVK09NSE1NTmVoMApJS2hLdWp3djl0MWlMaDNZcFZyZ0Zja2xBZndaSnV5T0hhRmtweTZlcXl3V0E5VU1DT054ZDArbUpoQTJFTXN3ClFBaE5qK3BsYWNqVCtLV0R3VklsUEFXTlUyeS9uWlJlRm9BU3dFZkFIa2hIR3FyeUo2Y2VJU0orYUxjNUc0WVgKd0k3WjlYeDgyT3RKR0ZlRzg3V2NPMFljTzB6NitpKzA0d0p6WGZodDlUSnc4bnV4QklPRlYvMVdIM2t4eGdSUAphcEUxZVZhblByM0pVN2lBY2pzRTdUeTVCcDA3QWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRWEhzQW5vcENsaFVLeG8zbklKZ2JoMnUxSGpqQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQXRBZHBsUjB2ZgpSWW9UQ08zM0F5dU1UcjdYOVQrYnBxTEFXMmU4ZWNkVVpYRHNTTlkzNmF3OTZCYi8zSERLK2JWcm5HTGRmUnhPCmZZbG5EbXp5UEVheUlKalUwZ1A2MnhvaWJLMEdzV2x2eEtzR3ZqZW50THlEZkg0LzBrZGJjRlJzSExGdHFTVlYKVHVkNTV4QVlhUTlEelZmUUR6eHBKNXBUMVBvVEdBemU1aEowdnV6STBtYXBGSHRtWnVyQUdPc2p6aW9ONUpzSApoc1c2azdHYzFRQkJKM0dQMzBjZGwvVUlNZjhhM0ZjQU5CWXNLOFVUazFNcWJ3ZDVib0dqQm5zRXlhdmF6Vm5zCmtCbFptN09qUWdxWEFBaVVJMTNnak9GNHg4Vi9NYlRpWlZ6YSttakZJOGRJZHJrVVVPK0t3aVluOGc4SExKc00KR2ZkNmlMM0RYNDFZCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "data-migration",
+                "Endpoint": "${eks_endpoint}",
+                "Job": {
+                  "apiVersion": "batch/v1",
+                  "kind": "Job",
+                  "metadata": {
+                    "name": "global-reconciliator-account",
+                    "namespace": "dataloader"
+                  },
+                  "spec": {
+                    "template": {
+                      "spec": {
+                        "serviceAccountName": "data-migration-services",
+                        "containers": [
+                          {
+                            "name": "global-reconciliator-account",
+                            "image": "${global_reconciliation_image}",
+                            "env": [
+                              {
+                                "name": "ENTITY",
+                                "value": "account"
+                              }
+                            ]
+                          }
+                        ],
+                        "nodeSelector": {
+                          "eks.amazonaws.com/nodegroup": "private-nodes"
+                        },
+                        "restartPolicy": "Never"
+                      }
+                    },
+                    "backoffLimit": 0
+                  }
+                },
+                "Namespace": "dataloader"
+              },
+              "Resource": "arn:aws:states:::eks:runJob.sync",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "EKS delete posting job",
+          "States": {
+            "EKS delete posting job": {
+              "Catch": [
+                {
+                  "Comment": "eks job doesn't exist",
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "Next": "Run Global Reconciliation Posting"
+                }
+              ],
+              "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJQTR4bHRySTdUczh3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBMU1UY3hNVEU1TVRaYUZ3MHpOREExTVRVeE1USTBNVFphTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUM5TjBCanZlRW9YN2d0UDkzSktuUm9JYm9IbE5YMSsxTHZjUVJlVmpkbzVXMmxtT3kyZWk1c0pXenIKUVp3Yjh3dEtOTVFtT05sbFdtZDJwbmlLSzBjWjZDZkdnU29TWDA5UzVFMUdER3FwZFRFMWhVK09NSE1NTmVoMApJS2hLdWp3djl0MWlMaDNZcFZyZ0Zja2xBZndaSnV5T0hhRmtweTZlcXl3V0E5VU1DT054ZDArbUpoQTJFTXN3ClFBaE5qK3BsYWNqVCtLV0R3VklsUEFXTlUyeS9uWlJlRm9BU3dFZkFIa2hIR3FyeUo2Y2VJU0orYUxjNUc0WVgKd0k3WjlYeDgyT3RKR0ZlRzg3V2NPMFljTzB6NitpKzA0d0p6WGZodDlUSnc4bnV4QklPRlYvMVdIM2t4eGdSUAphcEUxZVZhblByM0pVN2lBY2pzRTdUeTVCcDA3QWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRWEhzQW5vcENsaFVLeG8zbklKZ2JoMnUxSGpqQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQXRBZHBsUjB2ZgpSWW9UQ08zM0F5dU1UcjdYOVQrYnBxTEFXMmU4ZWNkVVpYRHNTTlkzNmF3OTZCYi8zSERLK2JWcm5HTGRmUnhPCmZZbG5EbXp5UEVheUlKalUwZ1A2MnhvaWJLMEdzV2x2eEtzR3ZqZW50THlEZkg0LzBrZGJjRlJzSExGdHFTVlYKVHVkNTV4QVlhUTlEelZmUUR6eHBKNXBUMVBvVEdBemU1aEowdnV6STBtYXBGSHRtWnVyQUdPc2p6aW9ONUpzSApoc1c2azdHYzFRQkJKM0dQMzBjZGwvVUlNZjhhM0ZjQU5CWXNLOFVUazFNcWJ3ZDVib0dqQm5zRXlhdmF6Vm5zCmtCbFptN09qUWdxWEFBaVVJMTNnak9GNHg4Vi9NYlRpWlZ6YSttakZJOGRJZHJrVVVPK0t3aVluOGc4SExKc00KR2ZkNmlMM0RYNDFZCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "data-migration",
+                "Endpoint": "${eks_endpoint}",
+                "Method": "DELETE",
+                "Path": "/apis/batch/v1/namespaces/dataloader/jobs/global-reconciliator-posting",
+                "QueryParameters": {
+                  "propagationPolicy": [
+                    "Foreground"
+                  ]
+                }
+              },
+              "Resource": "arn:aws:states:::eks:call",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "Next": "Run Global Reconciliation Posting"
+            },
+            "Run Global Reconciliation Posting": {
+              "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJQTR4bHRySTdUczh3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBMU1UY3hNVEU1TVRaYUZ3MHpOREExTVRVeE1USTBNVFphTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUM5TjBCanZlRW9YN2d0UDkzSktuUm9JYm9IbE5YMSsxTHZjUVJlVmpkbzVXMmxtT3kyZWk1c0pXenIKUVp3Yjh3dEtOTVFtT05sbFdtZDJwbmlLSzBjWjZDZkdnU29TWDA5UzVFMUdER3FwZFRFMWhVK09NSE1NTmVoMApJS2hLdWp3djl0MWlMaDNZcFZyZ0Zja2xBZndaSnV5T0hhRmtweTZlcXl3V0E5VU1DT054ZDArbUpoQTJFTXN3ClFBaE5qK3BsYWNqVCtLV0R3VklsUEFXTlUyeS9uWlJlRm9BU3dFZkFIa2hIR3FyeUo2Y2VJU0orYUxjNUc0WVgKd0k3WjlYeDgyT3RKR0ZlRzg3V2NPMFljTzB6NitpKzA0d0p6WGZodDlUSnc4bnV4QklPRlYvMVdIM2t4eGdSUAphcEUxZVZhblByM0pVN2lBY2pzRTdUeTVCcDA3QWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRWEhzQW5vcENsaFVLeG8zbklKZ2JoMnUxSGpqQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQXRBZHBsUjB2ZgpSWW9UQ08zM0F5dU1UcjdYOVQrYnBxTEFXMmU4ZWNkVVpYRHNTTlkzNmF3OTZCYi8zSERLK2JWcm5HTGRmUnhPCmZZbG5EbXp5UEVheUlKalUwZ1A2MnhvaWJLMEdzV2x2eEtzR3ZqZW50THlEZkg0LzBrZGJjRlJzSExGdHFTVlYKVHVkNTV4QVlhUTlEelZmUUR6eHBKNXBUMVBvVEdBemU1aEowdnV6STBtYXBGSHRtWnVyQUdPc2p6aW9ONUpzSApoc1c2azdHYzFRQkJKM0dQMzBjZGwvVUlNZjhhM0ZjQU5CWXNLOFVUazFNcWJ3ZDVib0dqQm5zRXlhdmF6Vm5zCmtCbFptN09qUWdxWEFBaVVJMTNnak9GNHg4Vi9NYlRpWlZ6YSttakZJOGRJZHJrVVVPK0t3aVluOGc4SExKc00KR2ZkNmlMM0RYNDFZCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "data-migration",
+                "Endpoint": "${eks_endpoint}",
+                "Job": {
+                  "apiVersion": "batch/v1",
+                  "kind": "Job",
+                  "metadata": {
+                    "name": "global-reconciliator-posting",
+                    "namespace": "dataloader"
+                  },
+                  "spec": {
+                    "template": {
+                      "spec": {
+                        "serviceAccountName": "data-migration-services",
+                        "containers": [
+                          {
+                            "name": "global-reconciliator-posting",
+                            "image": "${global_reconciliation_image}",
+                            "env": [
+                              {
+                                "name": "ENTITY",
+                                "value": "posting"
+                              }
+                            ]
+                          }
+                        ],
+                        "nodeSelector": {
+                          "eks.amazonaws.com/nodegroup": "private-nodes"
+                        },
+                        "restartPolicy": "Never"
+                      }
+                    },
+                    "backoffLimit": 0
+                  }
+                },
+                "Namespace": "dataloader"
+              },
+              "Resource": "arn:aws:states:::eks:runJob.sync",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    }
+  }
+}

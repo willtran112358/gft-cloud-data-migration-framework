@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: data-migration-services
+  namespace: dataloader
+  annotations:
+    eks.amazonaws.com/role-arn: 'arn:aws:iam::699955796816:role/stg-data-migration-services-role'

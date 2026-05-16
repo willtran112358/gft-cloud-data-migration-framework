@@ -1,0 +1,83 @@
+{
+    "Comment": "A description of my state machine",
+    "StartAt": "EKS Call",
+    "States": {
+        "EKS Call": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::eks:call",
+            "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJY0FGZUE2NkFxbjR3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TlRBME1ESXhORE01TkRoYUZ3MHpOVEF6TXpFeE5EUTBORGhhTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURaZXRyY2NmMWNpS2gzNVFnaEMrdFNrcHo3TDdEZEt3YkRxSVptWlJWRk5WS0VqVk5MQURJM2h1WHQKTkRPKzdYTmIzT051SnBYTENCK0hIZUJQam5YeTN4OUlUWXRFZHcramhxSVRiNFZCQTZXdlJrcUxGU3VJL04vVApSRGREVDc1V1BUN0hXcjczaU82cEhrR09yTkZOTE9PUFNSS2RvZldOaGNNTTZGRXh6WUVRVmtEZGo5NjFRL3p4CjEyZExLdXRyMjJ3Yk5rOEdjVlJrWFNDU3pGcWlHVVlnZEt2YjVIZ0lTQkpVTGp0c09lbktBT25vR3NPNkVqWVoKYU9vYVlsdFVzVFJDb1lOV1IyUDBHME1kTVNHMWZWVEJ4akJTaGluNEd1dDI5dVFCRlpyc0swSS82NzBKRTE1VwpKc0pTblBUNDQ1U1I2VUJZTmJmVVluZlZqaEREQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJTbHExbGpUcHhpNU11OUhHRjBPVGZMcEtFYzl6QVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQ015dkNjOW94VgphNHozVFUxSlRFOFpBWC92ajYrTEpRZDBUem9SK3p0YlV5OWpuMnVpMVM4ZFIzWDZGMjdzM3lwc05sc3R4Y3ZHCmtQa0VMc2xTcy8vK1ZPWndMdkFNRnR2bjQ5Z2F5bEppQno4Z1FOQ25DZmlSM0ZJRWk2K3RGRExnR0pvbDQ5LzUKZTdsZUMyWSthRlBMZWhmOFhPRjNQZDY4c0w4ZGtwNXkwVkN0dGdWRlpSWlNPQUl0K3FhLzd5K2t2VnlwQ2wzLwpMZForQUNXMTNJZ3c2VFJwUWh1dlJnZlJ2WUlubHF4RHQ3OTFaRit2Q09wNVRnR25reXRSNEUvMEFBT1ZUZjJRCk5ZUEJIMkxJL1FxVnc1aExZelYzTjQ1bCtObm10cDIrODRpZTJ5OGN6MTlRU0UwSEFwOUthaDMwTHQ3Y3M3YnkKSkpadDRjWmcrNi91Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "gft-dm-data-migration",
+                "Endpoint": "https://763824088AD2AA0A6791099333880C05.gr7.ap-southeast-1.eks.amazonaws.com",
+                "Method": "DELETE",
+                "Path": "/apis/batch/v1/namespaces/dataloader/jobs/customer-producer",
+                "QueryParameters": {
+                    "propagationPolicy": [
+                        "Foreground"
+                    ]
+                }
+            },
+            "Next": "Run Customer Producer",
+            "ResultPath": "$.response",
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Comment": "pass",
+                    "Next": "Run Customer Producer",
+                    "ResultPath": "$.response"
+                }
+            ]
+        },
+        "Run Customer Producer": {
+            "End": true,
+            "Parameters": {
+                "CertificateAuthority": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJY0FGZUE2NkFxbjR3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TlRBME1ESXhORE01TkRoYUZ3MHpOVEF6TXpFeE5EUTBORGhhTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURaZXRyY2NmMWNpS2gzNVFnaEMrdFNrcHo3TDdEZEt3YkRxSVptWlJWRk5WS0VqVk5MQURJM2h1WHQKTkRPKzdYTmIzT051SnBYTENCK0hIZUJQam5YeTN4OUlUWXRFZHcramhxSVRiNFZCQTZXdlJrcUxGU3VJL04vVApSRGREVDc1V1BUN0hXcjczaU82cEhrR09yTkZOTE9PUFNSS2RvZldOaGNNTTZGRXh6WUVRVmtEZGo5NjFRL3p4CjEyZExLdXRyMjJ3Yk5rOEdjVlJrWFNDU3pGcWlHVVlnZEt2YjVIZ0lTQkpVTGp0c09lbktBT25vR3NPNkVqWVoKYU9vYVlsdFVzVFJDb1lOV1IyUDBHME1kTVNHMWZWVEJ4akJTaGluNEd1dDI5dVFCRlpyc0swSS82NzBKRTE1VwpKc0pTblBUNDQ1U1I2VUJZTmJmVVluZlZqaEREQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJTbHExbGpUcHhpNU11OUhHRjBPVGZMcEtFYzl6QVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQ015dkNjOW94VgphNHozVFUxSlRFOFpBWC92ajYrTEpRZDBUem9SK3p0YlV5OWpuMnVpMVM4ZFIzWDZGMjdzM3lwc05sc3R4Y3ZHCmtQa0VMc2xTcy8vK1ZPWndMdkFNRnR2bjQ5Z2F5bEppQno4Z1FOQ25DZmlSM0ZJRWk2K3RGRExnR0pvbDQ5LzUKZTdsZUMyWSthRlBMZWhmOFhPRjNQZDY4c0w4ZGtwNXkwVkN0dGdWRlpSWlNPQUl0K3FhLzd5K2t2VnlwQ2wzLwpMZForQUNXMTNJZ3c2VFJwUWh1dlJnZlJ2WUlubHF4RHQ3OTFaRit2Q09wNVRnR25reXRSNEUvMEFBT1ZUZjJRCk5ZUEJIMkxJL1FxVnc1aExZelYzTjQ1bCtObm10cDIrODRpZTJ5OGN6MTlRU0UwSEFwOUthaDMwTHQ3Y3M3YnkKSkpadDRjWmcrNi91Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+                "ClusterName": "gft-dm-data-migration",
+                "Endpoint": "${eks_endpoint}",
+                "Job": {
+                    "apiVersion": "batch/v1",
+                    "kind": "Job",
+                    "metadata": {
+                        "name": "customer-producer",
+                        "namespace": "dataloader"
+                    },
+                    "spec": {
+                        "backoffLimit": 3,
+                        "template": {
+                            "spec": {
+                                "containers": [
+                                    {
+                                        "env": [
+                                            {
+                                                "name": "BATCH_SIZE",
+                                                "value.$": "$.size"
+                                            },
+                                            {
+                                                "name": "PRODUCTOR_QUERY",
+                                                "value.$": "$.query"
+                                            }
+                                        ],
+                                        "image": "${sf_deploy_job_producer_customer_image}",
+                                        "name": "customer-producer",
+                                        "imagePullPolicy": "Always"
+                                    }
+                                ],
+                                "nodeSelector": {
+                                    "eks.amazonaws.com/nodegroup": "private-nodes"
+                                },
+                                "restartPolicy": "Never",
+                                "serviceAccountName": "data-migration-services"
+                            }
+                        }
+                    }
+                },
+                "Namespace": "dataloader"
+            },
+            "Resource": "arn:aws:states:::eks:runJob.sync",
+            "ResultPath": "$.response",
+            "Type": "Task"
+        }
+    }
+}

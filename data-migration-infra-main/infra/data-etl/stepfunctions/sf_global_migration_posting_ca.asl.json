@@ -1,0 +1,414 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Lambda Start Logs",
+  "States": {
+    "Lambda Start Logs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-start-stop-dates",
+        "Payload": {
+          "time_execution": "START",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Glue Job - Postgres to S3 (posting)"
+    },
+    "Glue Job - Postgres to S3 (posting)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "gft-dm-postgres-to-s3",
+        "Arguments": {
+          "--table_name": "posting_instruction_batch"
+        }
+      },
+      "Next": "Step Function Invoke Crawler Posting"
+    },
+    "Step Function Invoke Crawler Posting": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "crawler_name": "crawler-posting-instruction-batch"
+        }
+      },
+      "Next": "Parallel (1)"
+    },
+    "Parallel (1)": {
+      "Type": "Parallel",
+      "Next": "Step Functions Raw to Migration Posting",
+      "Branches": [
+        {
+          "StartAt": "Glue Job - Postgres to S3 (balances_ca)",
+          "States": {
+            "Glue Job - Postgres to S3 (balances_ca)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "balances_ca"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Balances CA"
+            },
+            "Step Function Invoke Crawler Balances CA": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-balances-ca"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (balances_sa)",
+          "States": {
+            "Glue Job - Postgres to S3 (balances_sa)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "balances_sa"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Balances SA"
+            },
+            "Step Function Invoke Crawler Balances SA": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-balances-sa"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (balances_od)",
+          "States": {
+            "Glue Job - Postgres to S3 (balances_od)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "balances_od"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Balances OD"
+            },
+            "Step Function Invoke Crawler Balances OD": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-balances-od"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (balances_loan)",
+          "States": {
+            "Glue Job - Postgres to S3 (balances_loan)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "balances_loan"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Balances Loan"
+            },
+            "Step Function Invoke Crawler Balances Loan": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-balances-loan"
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Step Functions Raw to Migration Posting": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_posting_raw_to_migration",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Next": "Parallel posting history insertion"
+    },
+    "Parallel posting history insertion": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Lambda History Staging Posting",
+          "States": {
+            "Lambda History Staging Posting": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "FunctionName": "gft-dm-lambda-history",
+                "Payload": {
+                  "table_name": "posting",
+                  "database": "uat_staging",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Lambda History Migration Posting",
+          "States": {
+            "Lambda History Migration Posting": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "FunctionName": "gft-dm-lambda-history",
+                "Payload": {
+                  "table_name": "aux_posting_instruction_batch",
+                  "database": "uat_migrationdb",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Glue StartJobRun Posting Id Matcher"
+    },
+    "Glue StartJobRun Posting Id Matcher": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "gft-dm-posting-tm-id-matcher"
+      },
+      "Next": "Athena Delete Retry Policy 0"
+    },
+    "Athena Delete Retry Policy 0": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Step Functions Execute Producer Posting"
+    },
+    "Step Functions Execute Producer Posting": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_deploying_job_producer_posting",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "query": "SELECT * FROM AUX_POSTING_INSTRUCTION_BATCH WHERE TARGET_ACCOUNT_ID IN (SELECT ID FROM MASTER_ACCOUNT) AND client_batch_id NOT IN (SELECT client_batch_id FROM master_posting_instruction_batch)",
+          "size": "50"
+        }
+      },
+      "Next": "Step Functions StartExecution Retry Listener Posting"
+    },
+    "Step Functions StartExecution Retry Listener Posting": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_retry_listener",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "entity": "posting_instruction_batch"
+        }
+      },
+      "Next": "Lambda count master posting",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Step Functions Execute Posting Producer 2"
+        }
+      ]
+    },
+    "Step Functions Execute Posting Producer 2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_deploying_job_producer_posting",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "query": "SELECT * FROM AUX_POSTING_INSTRUCTION_BATCH WHERE TARGET_ACCOUNT_ID IN (SELECT ID FROM master_account) and client_batch_id not in (select client_batch_id from reconciliation_posting_instruction_batch) and client_batch_id NOT IN (SELECT client_batch_id FROM master_posting_instruction_batch)",
+          "size": "1"
+        }
+      },
+      "Next": "Athena Delete Retry Policy 3"
+    },
+    "Lambda count master posting": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-count-unreconcilied-entities",
+        "Payload": {
+          "executionId.$": "$$.Execution.Id",
+          "query": "SELECT count(*) FROM master_posting_instruction_batch"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Choice (1)",
+      "ResultPath": "$.response"
+    },
+    "Choice (1)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.response.Payload.statusCode",
+            "NumericEquals": 200
+          },
+          "Next": "Lambda End Logs"
+        }
+      ],
+      "Default": "Athena Delete Retry Policy"
+    },
+    "Athena Delete Retry Policy": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Lambda End Logs"
+    },
+    "Athena Delete Retry Policy 3": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Wait (1)"
+    },
+    "Wait (1)": {
+      "Type": "Wait",
+      "Seconds": 15,
+      "Next": "Step Functions StartExecution Retry Listener Posting"
+    },
+    "Lambda End Logs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-start-stop-dates",
+        "Payload": {
+          "time_execution": "STOP",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "End": true
+    }
+  }
+}

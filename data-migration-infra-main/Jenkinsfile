@@ -1,0 +1,130 @@
+pipeline {
+    
+    agent {
+        label 'jenkins_slave'
+    }
+    tools {
+        terraform 'terraform-v1.11.4' 
+    }
+    environment {
+        EMAIL_SENDER = 'cicd-notification@hdbank.com.vn'
+        EMAIL_RECIPIENT = 'dinhnh1@hdbank.com.vn,hoannd1@hdbank.com.vn'
+        EMAIL_CC = 'hunglp2@hdbank.com.vn'
+        PROJECT_NAME = 'DATA-MIGRATION-PIPELINE-INFRA'
+        TF_CLI_ARGS = '-no-color'
+        TF_TOKEN_git_hdbank_com_vn = credentials('TF_TOKEN_git_hdbank_com_vn')
+    }
+
+    stages {
+
+        stage('Setup AWS Credentials and ENV') {
+            steps {
+                script {
+                    env.BRANCH = env.gitlabTargetBranch
+                    //env.PATH_ENV = (env.BRANCH == 'main') ? 'prod' : (env.BRANCH == 'dev') ? 'dev' : 'NOT_FOUND'
+                    withAWS(credentials: 'data-migration-cicd-accesskey', region: 'ap-southeast-1') {
+                        env.AWS_ACCESS_KEY_ID = env.AWS_ACCESS_KEY_ID
+                        env.AWS_SECRET_ACCESS_KEY = env.AWS_SECRET_ACCESS_KEY
+                    }
+                }
+            }
+        }
+
+
+        stage('Terraform Init') {
+            steps {
+                echo 'Terraform init step'
+                sh "cd infra/data-etl && terraform init -reconfigure"
+    
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                echo 'Terraform plan step'
+                sh "cd infra/data-etl && terraform plan -out=tfplan && terraform show -no-color tfplan > tfplan.txt"
+            }
+        }
+
+        // stage('Checkov Scan') {
+        //     steps {
+        //         echo 'Running Checkov using Docker to scan Terraform security'
+        //         script {
+        //             def checkovStatus = sh(script: """
+        //                 docker run --rm -u 0 -v \$(pwd):/tf bridgecrew/checkov -d /tf --download-external-modules true -o cli | tee checkov_output.txt
+        //             """, returnStatus: true)
+
+        //             if (checkovStatus != 0) {
+        //                 error("Checkov detected security issues in Terraform plan!")
+        //             }
+        //         }
+        //     }
+        //     post {
+        //         always {
+        //             archiveArtifacts artifacts: 'checkov_output.txt', fingerprint: true
+        //         }
+        //     }
+        // }
+
+        stage('Approval') {
+            steps {
+                script {
+                    def plan = readFile "infra/data-etl/tfplan.txt"
+                    input message: "Do you want to apply the plan?",
+                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                echo 'Terraform apply step'
+                sh "cd infra/data-etl && terraform apply -input=false tfplan"
+            }
+        }
+
+    }
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check the logs for more details.'
+        }
+        always {
+            echo 'Pipeline execution finished.'
+            // Uncomment to send completion email if needed
+            sendCompletionEmail()
+        }
+    }
+}
+def sendCompletionEmail() {
+    script {
+        def buildStatus = currentBuild.currentResult
+        def buildDuration = currentBuild.durationString.replace(' and counting', '') ?: 'N/A'
+        def htmlContent = """
+        <html>
+            <body>
+                <h3>Pipeline Notification</h3>
+                <p>The pipeline has completed with the following informations:</p>
+                <ul>
+                    <li><strong>Project:</strong> ${env.PROJECT_NAME}</li>
+                    <li><strong>Build Number:</strong> ${env.BUILD_NUMBER}</li>
+                    <li><strong>Status:</strong> ${buildStatus}</li>
+                    <li><strong>Duration:</strong> ${buildDuration}</li>
+                </ul>
+                <p>View more details in the <a href="${env.BUILD_URL}">Build Console</a>.</p>
+            </body>
+        </html>
+        """
+        mail bcc: '', 
+            body: htmlContent,
+            mimeType: 'text/html', 
+            from: env.EMAIL_SENDER,
+            cc: env.EMAIL_CC,
+            replyTo: '', 
+            subject: "${buildStatus} - Build #${env.BUILD_NUMBER} - ${env.PROJECT_NAME}", 
+            to: env.EMAIL_RECIPIENT
+    }
+        
+}

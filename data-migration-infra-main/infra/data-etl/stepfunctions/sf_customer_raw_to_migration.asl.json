@@ -1,0 +1,133 @@
+{
+  "Comment": "Step function to execute all glue jobs and lambdas needed to move customers from rawdb o migrationdb",
+  "StartAt": "Athena StartQueryExecution Delete Staging Customer",
+  "States": {
+    "Athena StartQueryExecution Delete Migration Customer": {
+      "Next": "Start Job staging-migration",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.customer",
+        "WorkGroup": "primary"
+      },
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Athena StartQueryExecution Delete Staging Customer": {
+      "Next": "Start Job raw-staging",
+      "Parameters": {
+        "QueryString": "DELETE from uat_staging.customer",
+        "WorkGroup": "primary"
+      },
+      "Resource": "arn:aws:states:::athena:startQueryExecution.sync",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Choice (1)": {
+      "Choices": [
+        {
+          "Next": "Fail",
+          "Not": {
+            "NumericEquals": 200,
+            "Variable": "$.response.Payload.statusCode"
+          }
+        }
+      ],
+      "Default": "Athena StartQueryExecution Delete Migration Customer",
+      "Type": "Choice"
+    },
+    "Choice (2)": {
+      "Choices": [
+        {
+          "Next": "Fail",
+          "Not": {
+            "NumericEquals": 200,
+            "Variable": "$.response.Payload.statusCode"
+          }
+        }
+      ],
+      "Default": "Success",
+      "Type": "Choice"
+    },
+    "Fail": {
+      "Type": "Fail"
+    },
+    "Lambda reconciliation raw to staging": {
+      "Next": "Choice (1)",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-customer-reconciliation-raw-staging",
+        "Payload": {
+          "executionId.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        }
+      },
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.response",
+      "Retry": [
+        {
+          "BackoffRate": 2,
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3
+        }
+      ],
+      "Type": "Task"
+    },
+    "Lambda reconciliation staging to migration": {
+      "Next": "Choice (2)",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-customer-reconciliation-staging-migration",
+        "Payload": {
+          "executionId.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        }
+      },
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.response",
+      "Retry": [
+        {
+          "BackoffRate": 2,
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3
+        }
+      ],
+      "Type": "Task"
+    },
+    "Start Job raw-staging": {
+      "Next": "Lambda reconciliation raw to staging",
+      "Parameters": {
+        "Arguments": {
+          "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+          "--table_name": "customer"
+        },
+        "JobName": "gft-dm-raw-to-staging"
+      },
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Start Job staging-migration": {
+      "Next": "Lambda reconciliation staging to migration",
+      "Parameters": {
+        "Arguments": {
+          "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        },
+        "JobName": "gft-dm-customer-staging-migrationdb"
+      },
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}

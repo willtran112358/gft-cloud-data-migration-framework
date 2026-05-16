@@ -1,0 +1,12 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: reconciliator-api
+  namespace: dataloader
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+  selector:
+    app: reconciliator-api

@@ -1,0 +1,104 @@
+{
+    "Comment": "Export Overdraft Data From Postgres to S3",
+    "StartAt": "RunGlueJobsInParallel",
+    "States": {
+        "RunGlueJobsInParallel": {
+            "Type": "Parallel",
+            "Branches": [
+                {
+                    "StartAt": "ExportBalancesOD",
+                    "States": {
+                        "ExportBalancesOD": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                            "Parameters": {
+                                "JobName": "${postgres-to-s3-generic}",
+                                "Arguments": {
+                                    "--table_name": "balances_od",
+                                    "--pg_host": "${pg_host}",
+                                    "--pg_port": "${pg_port}",
+                                    "--pg_user": "${pg_user}",
+                                    "--pg_secret_name": "${pg_secret_name}",
+                                    "--pg_database": "${pg_database}",
+                                    "--pg_schema": "${pg_schema}",
+                                    "--output_s3": "${output_s3}"
+                                }
+                            },
+                            "End": true
+                        }
+                    }
+                },
+                {
+                    "StartAt": "ExportParameterValuesOD",
+                    "States": {
+                        "ExportParameterValuesOD": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                            "Parameters": {
+                                "JobName": "${postgres-to-s3-generic}",
+                                "Arguments": {
+                                    "--table_name": "parameters_values_od",
+                                    "--pg_host": "${pg_host}",
+                                    "--pg_port": "${pg_port}",
+                                    "--pg_user": "${pg_user}",
+                                    "--pg_secret_name": "${pg_secret_name}",
+                                    "--pg_database": "${pg_database}",
+                                    "--pg_schema": "${pg_schema}",
+                                    "--output_s3": "${output_s3}"
+                                }
+                            },
+                            "End": true
+                        }
+                    }
+                },
+                {
+                    "StartAt": "ExportFixedInterestRateOD",
+                    "States": {
+                        "ExportFixedInterestRateOD": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                            "Parameters": {
+                                "JobName": "${postgres-to-s3-generic}",
+                                "Arguments": {
+                                    "--table_name": "fixed_interest_rate_od",
+                                    "--pg_host": "${pg_host}",
+                                    "--pg_port": "${pg_port}",
+                                    "--pg_user": "${pg_user}",
+                                    "--pg_secret_name": "${pg_secret_name}",
+                                    "--pg_database": "${pg_database}",
+                                    "--pg_schema": "${pg_schema}",
+                                    "--output_s3": "${output_s3}"
+                                }
+                            },
+                            "End": true
+                        }
+                    }
+                },
+                {
+                    "StartAt": "ExportOriginalDueDatesOD",
+                    "States": {
+                        "ExportOriginalDueDatesOD": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                            "Parameters": {
+                                "JobName": "${postgres-to-s3-generic}",
+                                "Arguments": {
+                                    "--table_name": "original_due_dates_interest_dates_od",
+                                    "--pg_host": "${pg_host}",
+                                    "--pg_port": "${pg_port}",
+                                    "--pg_user": "${pg_user}",
+                                    "--pg_secret_name": "${pg_secret_name}",
+                                    "--pg_database": "${pg_database}",
+                                    "--pg_schema": "${pg_schema}",
+                                    "--output_s3": "${output_s3}"
+                                }
+                            },
+                            "End": true
+                        }
+                    }
+                }
+            ],
+            "End": true
+        }
+    }
+}

@@ -1,0 +1,40 @@
+# Ignorar la carpeta .terraform y archivos relacionados
+.terraform/
+.terraform.lock.hcl
+
+# Ignorar archivos .tfstate
+*.tfstate
+*.tfstate.*
+
+# Ignorar archivos de registro de fallos
+crash.log
+
+# Ignorar archivos .tfvars (puedes descomentar si los necesitas)
+#*.tfvars
+
+# Ignorar archivos de anulación
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignorar archivos tfplan
+*tfplan*
+
+# Ignorar archivos de configuración de CLI
+.terraformrc
+terraform.rc
+
+# Ignorar configuraciones ENV-VAR via dotfiles
+.envrc
+
+# Ignorar configuraciones de Idea
+.idea/*
+
+# Ignorar archivos Python compilados
+*.pyc
+
+# Ignorar otros archivos/carpetas específicas
+env_mig/*
+_/*
+*.zip

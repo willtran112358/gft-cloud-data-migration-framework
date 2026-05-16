@@ -1,0 +1,198 @@
+{
+  "Comment": "Step function to execute all glue jobs and lambdas needed to move postings from rawdb o migrationdb",
+  "StartAt": "Athena StartQueryExecution Delete Staging posting",
+  "States": {
+    "Athena StartQueryExecution Delete Migration posting": {
+      "Next": "Start Job staging-migration",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.aux_posting_instruction_batch",
+        "WorkGroup": "primary"
+      },
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Athena StartQueryExecution Delete Staging posting": {
+      "Next": "Parallel",
+      "Parameters": {
+        "QueryString": "DELETE from uat_staging.posting_instruction_batch",
+        "WorkGroup": "primary"
+      },
+      "Resource": "arn:aws:states:::athena:startQueryExecution.sync",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "Next": "Lambda reconciliation raw to staging",
+      "Branches": [
+        {
+          "StartAt": "Start Job ca-posting raw-staging",
+          "States": {
+            "Start Job ca-posting raw-staging": {
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+                  "--table_name": "ca_posting"
+                },
+                "JobName": "ca-posting-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Start Job sa-posting raw-staging",
+          "States": {
+            "Start Job sa-posting raw-staging": {
+              "Parameters": {
+                "Arguments": {
+                  "--table_name": "sa_posting"
+                },
+                "JobName": "sa-posting-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Start Job od-posting raw-staging",
+          "States": {
+            "Start Job od-posting raw-staging": {
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+                  "--table_name": "od_posting"
+                },
+                "JobName": "od-posting-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Start Job loan-posting raw-staging",
+          "States": {
+            "Start Job loan-posting raw-staging": {
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+                  "--table_name": "loan_posting"
+                },
+                "JobName": "loan-posting-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task",
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.response"
+    },
+    "Choice (1)": {
+      "Choices": [
+        {
+          "Next": "Fail",
+          "Not": {
+            "NumericEquals": 200,
+            "Variable": "$.response.Payload.statusCode"
+          }
+        }
+      ],
+      "Default": "Athena StartQueryExecution Delete Migration posting",
+      "Type": "Choice"
+    },
+    "Choice (2)": {
+      "Choices": [
+        {
+          "Next": "Fail",
+          "Not": {
+            "NumericEquals": 200,
+            "Variable": "$.response.Payload.statusCode"
+          }
+        }
+      ],
+      "Default": "Success",
+      "Type": "Choice"
+    },
+    "Fail": {
+      "Type": "Fail"
+    },
+    "Lambda reconciliation raw to staging": {
+      "Next": "Choice (1)",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-posting-reconciliation-raw-staging",
+        "Payload": {
+          "executionId.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        }
+      },
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.response",
+      "Retry": [
+        {
+          "BackoffRate": 2,
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3
+        }
+      ],
+      "Type": "Task"
+    },
+    "Lambda reconciliation staging to migration": {
+      "Next": "Choice (2)",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-posting-reconciliation-staging-migration",
+        "Payload": {
+          "executionId.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        }
+      },
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.response",
+      "Retry": [
+        {
+          "BackoffRate": 2,
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3
+        }
+      ],
+      "Type": "Task"
+    },
+    "Start Job staging-migration": {
+      "Next": "Lambda reconciliation staging to migration",
+      "Parameters": {
+        "Arguments": {
+          "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        },
+        "JobName": "gft-dm-posting-staging-migrationdb"
+      },
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}

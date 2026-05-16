@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: posting2-producer
+  namespace: dataloader
+spec:
+  template:
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+      - name: posting2-producer
+        image: dl-posting-p
+        imagePullPolicy: Always
+        env:
+          - name: ENTITY
+            value: "account"  
+      restartPolicy: OnFailure
+  backoffLimit: 0                     

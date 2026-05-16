@@ -1,0 +1,206 @@
+{
+  "Comment": "Customer-only state machine",
+  "StartAt": "Lambda Start Logs",
+  "States": {
+    "Lambda Start Logs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-start-stop-dates",
+        "Payload": {
+          "time_execution": "START",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Glue Job - Postgres to S3"
+    },
+    "Glue Job - Postgres to S3": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "gft-dm-postgres-to-s3",
+        "Arguments": {
+          "--table_name": "customer"
+        }
+      },
+      "Next": "Step Function Invoke Crawlers"
+    },
+    "Step Function Invoke Crawlers": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-all-crawler",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "functionality": "csv-raw"
+        }
+      },
+      "Next": "Step Functions Raw to Migration Customer"
+    },
+    "Step Functions Raw to Migration Customer": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_customer_raw_to_migration",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Next": "Athena Delete Retry Policy 0"
+    },
+    
+    "Athena Delete Retry Policy 0": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Step Functions Execute Producer Customer"
+    },
+    "Step Functions Execute Producer Customer": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_deploying_job_producer_customer",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "query": "SELECT * FROM uat_migrationdb.customer",
+          "size": "50"
+        }
+      },
+      "Next": "Step Functions StartExecution Retry Listener Customer"
+    },
+    "Step Functions StartExecution Retry Listener Customer": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_retry_listener",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "entity": "customer"
+        }
+      },
+      "Next": "Lambda count master customers",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Step Functions Execute Customer Producer 2"
+        }
+      ]
+    },
+    "Lambda count master customers": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-count-unreconcilied-entities",
+        "Payload": {
+          "executionId.$": "$$.Execution.Id",
+          "query": "SELECT count(*) FROM uat_migrationdb.master_customer "
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Choice",
+      "ResultPath": "$.response"
+    },
+    "Choice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.response.Payload.statusCode",
+            "NumericEquals": 200
+          },
+          "Next": "Lambda End Logs"
+        }
+      ],
+      "Default": "Lambda End Logs"
+    },
+    "Step Functions Execute Customer Producer 2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_deploying_job_producer_customer",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "query": "SELECT * FROM uat_migrationdb.customer where id not in (SELECT id FROM uat_migrationdb.reconciliation_customer)",
+          "size": "1"
+        }
+      },
+      "Next": "Athena Delete Retry Policy 2"
+    },
+    "Athena Delete Retry Policy 2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Wait"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 15,
+      "Next": "Step Functions StartExecution Retry Listener Customer"
+    },
+    "Lambda End Logs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-start-stop-dates",
+        "Payload": {
+          "time_execution": "STOP",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "End": true
+    }
+  }
+}

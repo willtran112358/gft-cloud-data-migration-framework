@@ -1,0 +1,199 @@
+{
+  "Comment": "Step function to execute all glue jobs and lambdas needed to move accounts from rawdb to migrationdb",
+  "StartAt": "Athena StartQueryExecution Delete Staging account",
+  "States": {
+    "Athena StartQueryExecution Delete Staging account": {
+      "Next": "Parallel Tasks",
+      "Parameters": {
+        "QueryString": "DELETE from uat_staging.account",
+        "WorkGroup": "primary"
+      },
+      "Resource": "arn:aws:states:::athena:startQueryExecution.sync",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Parallel Tasks": {
+      "Type": "Parallel",
+      "Next": "Lambda reconciliation raw to staging",
+      "Branches": [
+        {
+          "StartAt": "Start Job raw-staging sa_account",
+          "States": {
+            "Start Job raw-staging sa_account": {
+              "End": true,
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+                  "--table_name": "sa_account"
+                },
+                "JobName": "sa-account-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task"
+            }
+          }
+        },
+        {
+          "StartAt": "Start Job raw-staging ca_account",
+          "States": {
+            "Start Job raw-staging ca_account": {
+              "End": true,
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+                  "--table_name": "ca_account"
+                },
+                "JobName": "ca-account-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task"
+            }
+          }
+        },
+        {
+          "StartAt": "Start Job raw-staging od_account",
+          "States": {
+            "Start Job raw-staging od_account": {
+              "End": true,
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+                  "--table_name": "od_account"
+                },
+                "JobName": "od-account-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task"
+            }
+          }
+        },
+        {
+          "StartAt": "Start Job raw-staging loan_account",
+          "States": {
+            "Start Job raw-staging loan_account": {
+              "End": true,
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID",
+                  "--table_name": "loan_account"
+                },
+                "JobName": "loan-account-job-raw-to-staging"
+              },
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "ResultPath": "$.response",
+              "Type": "Task"
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.response"
+    },
+    "Lambda reconciliation raw to staging": {
+      "Next": "Choice (1)",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-account-reconciliation-raw-staging",
+        "Payload": {
+          "executionId.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        }
+      },
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.response",
+      "Retry": [
+        {
+          "BackoffRate": 2,
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3
+        }
+      ],
+      "Type": "Task"
+    },
+    "Choice (1)": {
+      "Choices": [
+        {
+          "Next": "Fail",
+          "Not": {
+            "NumericEquals": 200,
+            "Variable": "$.response.Payload.statusCode"
+          }
+        }
+      ],
+      "Default": "Athena StartQueryExecution Delete Migration account",
+      "Type": "Choice"
+    },
+    "Athena StartQueryExecution Delete Migration account": {
+      "Next": "Start Job staging-migration",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.aux_account",
+        "WorkGroup": "primary"
+      },
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Start Job staging-migration": {
+      "Next": "Lambda reconciliation staging to migration",
+      "Parameters": {
+        "Arguments": {
+          "--execution_id.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        },
+        "JobName": "gft-dm-account-staging-migrationdb"
+      },
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "ResultPath": "$.response",
+      "Type": "Task"
+    },
+    "Lambda reconciliation staging to migration": {
+      "Next": "Choice (2)",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-account-reconciliation-staging-migration",
+        "Payload": {
+          "executionId.$": "$.AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID"
+        }
+      },
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "ResultPath": "$.response",
+      "Retry": [
+        {
+          "BackoffRate": 2,
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3
+        }
+      ],
+      "Type": "Task"
+    },
+    "Choice (2)": {
+      "Choices": [
+        {
+          "Next": "Fail",
+          "Not": {
+            "NumericEquals": 200,
+            "Variable": "$.response.Payload.statusCode"
+          }
+        }
+      ],
+      "Default": "Success",
+      "Type": "Choice"
+    },
+    "Fail": {
+      "Type": "Fail"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}

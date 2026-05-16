@@ -1,0 +1,4 @@
+{
+    "athena_bucket": "<ACCOUNTID>-eu-central-1-gft-dm-development-athena-queries",
+    "final_table_name":"customer.parquet"
+}

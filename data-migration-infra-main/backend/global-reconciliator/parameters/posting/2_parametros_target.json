@@ -1,0 +1,30 @@
+{
+    "Report": "Report GFT Espana",
+    "id_report": "001GFT",
+    "union": "N/A",
+    "source": "AWS-ATHENA",
+    "bucket": "<ACCOUNTID>-eu-central-1-gft-dm-development-migration",
+    "initial_prefix":"queries-results",
+    "files_prefix":"reconciliator-files/parquet_files/posting",
+    "path_final": "reconciliator-files/final_parquet/posting",
+    "parquet_key": "id2",
+    "Keys": 
+        ["id"],
+    "Output_Data":
+        ["*"],
+    "Tables": {
+        "Change_names": {
+            "external_transaction_id":"id2"
+        },
+        "data_to_extract":{
+            "Variables": {
+                "DB_Name": "development_migrationdb",
+                "Set": "-",
+                "Name": "master_posting_instruction_batch",
+                "Join": "inner",
+                "Fields": ["external_transaction_id", "denomination"]
+            }
+        }
+        
+    }
+}

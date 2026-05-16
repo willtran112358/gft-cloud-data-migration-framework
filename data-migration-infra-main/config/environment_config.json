@@ -1,0 +1,9 @@
+{"blx-demo-environment": {
+    "ops_dash_url": "https://ops.tm.blx-demo.com/", 
+    "core_api_url": "https://core-api.tm.blx-demo.com", 
+    "data_loader_api_url": "https://data-loader-api.tm.blx-demo.com", 
+    "workflow_api_url": "https://workflows-api.tm.blx-demo.com", 
+    "kafka": {"bootstrap.servers": "TBD, TBD, TBD"}, 
+    "service_account_name": "", 
+    "service_account_id": "", 
+    "access_token": ""}}

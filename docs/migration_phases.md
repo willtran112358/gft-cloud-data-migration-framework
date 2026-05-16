@@ -1,5 +1,7 @@
 # GFT migration phases — legacy core → ThoughtMachine → AWS
 
+For the **implemented AWS pipeline** (PostgreSQL → S3 → Glue staging → Iceberg migration → Lambda/Athena recon → ThoughtMachine), see **[gft_migration_pipeline.md](gft_migration_pipeline.md)** and `data-migration-infra-main/`.
+
 ## Phase 1: Legacy extract to S3
 
 **Goal:** Freeze and land authoritative legacy snapshots before any ThoughtMachine load.

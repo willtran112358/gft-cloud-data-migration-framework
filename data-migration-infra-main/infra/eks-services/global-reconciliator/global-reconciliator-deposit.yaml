@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: global-reconciliator-deposit
+  namespace: dataloader
+spec:
+  template:
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+      - name: global-reconciliator-deposit
+        image: global-reconciliator-api
+        imagePullPolicy: Always
+        env:
+          - name: ENTITY
+            value: "deposit"        
+      restartPolicy: Never
+  backoffLimit: 0     

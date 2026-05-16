@@ -1,0 +1,60 @@
+{
+  "Comment": "A utility state machine to run only crawlers",
+  "StartAt": "Inject Crawler List",
+  "States": {
+    "Inject Crawler List": {
+      "Type": "Pass",
+      "Result": {
+        "CrawlerNames": [
+          "crawler-customer",
+          "crawler-account"
+        ]
+      },
+      "ResultPath": "$",
+      "Next": "Run Glue Crawlers"
+    },
+    "Run Glue Crawlers": {
+      "Type": "Map",
+      "ItemsPath": "$.CrawlerNames",
+      "Iterator": {
+        "StartAt": "Run Glue Crawler",
+        "States": {
+          "Run Glue Crawler": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Parameters": {
+              "Input": {
+                "crawler_name.$": "$"
+              },
+              "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler"
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "States.ALL"
+                ],
+                "IntervalSeconds": 2,
+                "BackoffRate": 5,
+                "MaxAttempts": 3
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": [
+                  "States.ALL"
+                ],
+                "Next": "Success"
+              }
+            ],
+            "Next": "Success"
+          },
+          "Success": {
+            "Type": "Succeed"
+          }
+        }
+      },
+      "ResultPath": null,
+      "End": true
+    }
+  }
+}

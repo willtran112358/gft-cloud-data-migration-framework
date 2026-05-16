@@ -1,0 +1,238 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-create-responses
+  namespace: dataloader
+spec:
+  selector:
+    matchLabels:
+      app: consumer-create-responses
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: consumer-create-responses
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+        - image: dl-consumers
+          name: consumer-create-responses
+          imagePullPolicy: Always
+          env:
+          - name: HTTP_RECONCILIATOR_API
+            value: "reconciliator-api"
+          - name: TOPIC
+            value: "vault.data_loader_api.v1.data_loader.resource_batch.create.responses"             
+          - name: GROUP_ID
+            value: "consumer-group1"     
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-event
+  namespace: dataloader
+spec:
+  selector:
+    matchLabels:
+      app: consumer-event
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: consumer-event
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+        - image: dl-consumers
+          name: consumer-event
+          imagePullPolicy: Always
+          env:
+          - name: HTTP_RECONCILIATOR_API
+            value: "reconciliator-api"
+          - name: TOPIC
+            value: "vault.data_loader_api.v1.data_loader.resource.migrated.events"            
+          - name: GROUP_ID
+            value: "consumer-group1"     
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-failures
+  namespace: dataloader
+spec:
+  selector:
+    matchLabels:
+      app: consumer-failures
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: consumer-failures
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+        - image: dl-consumers
+          name: consumer-failures
+          imagePullPolicy: Always
+          env:
+          - name: HTTP_RECONCILIATOR_API
+            value: "reconciliator-api"
+          - name: TOPIC
+            value: "vault.data_loader_api.v1.data_loader.resource_batch.create.requests.failures"
+          - name: GROUP_ID
+            value: "consumer-group1"          
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-account-events
+  namespace: dataloader
+spec:
+  selector:
+    matchLabels:
+      app: consumer-account-events
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: consumer-account-events
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+        - image: dl-consumers
+          name: consumer-account-events
+          imagePullPolicy: Always
+          env:
+          - name: HTTP_RECONCILIATOR_API
+            value: "reconciliator-api"
+          - name: TOPIC
+            value: "vault.core_api.v2.accounts.account.events"
+          - name: GROUP_ID
+            value: "consumer-group1"          
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-posting-dlq
+  namespace: dataloader
+spec:
+  selector:
+    matchLabels:
+      app: consumer-posting-dlq
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: consumer-posting-dlq
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+        - image: dl-consumers
+          name: consumer-posting-dlq
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+            requests:
+              cpu: "0.1"
+              memory: "128Mi"
+          env:
+          - name: HTTP_RECONCILIATOR_API
+            value: "reconciliator-api"
+          - name: TOPIC
+            value: "vault.migrations.postings.requests.dlq"
+          - name: GROUP_ID
+            value: "consumer-group1"          
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-posting-responses
+  namespace: dataloader
+spec:
+  selector:
+    matchLabels:
+      app: consumer-posting-responses
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: consumer-posting-responses
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+        - image: dl-consumers
+          name: consumer-posting-responses
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+            requests:
+              cpu: "0.1"
+              memory: "128Mi"
+          env:
+          - name: HTTP_RECONCILIATOR_API
+            value: "reconciliator-api"
+          - name: TOPIC
+            value: "vault.api.v1.postings.posting_instruction_batch.created"
+          - name: GROUP_ID
+            value: "consumer-group1"          
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-account-balances-responses
+  namespace: dataloader
+spec:
+  selector:
+    matchLabels:
+      app: consumer-account-balances-responses
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: consumer-account-balances-responses
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+        - image: dl-consumers
+          name: consumer-account-balances-responses
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+            requests:
+              cpu: "0.1"
+              memory: "128Mi"
+          env:
+          - name: HTTP_RECONCILIATOR_API
+            value: "reconciliator-api"
+          - name: TOPIC
+            value: "vault.core_api.v1.balances.account_balance.events"
+          - name: GROUP_ID
+            value: "consumer-group1"          
+  

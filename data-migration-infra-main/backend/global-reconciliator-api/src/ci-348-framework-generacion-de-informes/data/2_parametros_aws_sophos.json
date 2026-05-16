@@ -1,0 +1,30 @@
+{
+    "Reporte": "Report GFT Espana",
+    "Id_Reporte": "001GFT",
+    "union": "N/A",
+    "source": "AWS-ATHENA",
+    "bucket": "sophos-dev-bucket",
+    "initial_prefix":"athena_result",
+    "files_prefix":"proteccion_files/parquet_files",
+    "path_final": "proteccion_files/final_parquet",
+    "parquet_key": "trn_ref_no",
+    "Llaves": 
+        ["trn_ref_no"],
+    "Datos_Salida":
+        ["trn_ref_no", "ac_entry_sr_no", "event_sr_no", "event"],
+    "Tablas": {
+        "Cambios_Nombres": {
+            "-":"-"
+        },
+        "datos_a_extraer":{
+            "Variables": {
+                "Nombre_DB": "default",
+                "Conjunto": "-",
+                "Nombre": "acvw_all_ac_entries",
+                "Join": "inner",
+                "Campos": ["*"]
+            }
+                    }
+        
+    }
+}

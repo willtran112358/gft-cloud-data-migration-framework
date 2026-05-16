@@ -1,0 +1,16 @@
+module "vpc_endpoints_security_group" {
+  source = "../modules/L2/security-group"
+
+  use_name_prefix = false
+  name            = "${var.environment}-vpc-endpoints-sg"
+  description     = "Security group for VPC Endpoints"
+  vpc_id          = module.vpc_with_flow_logs_cloudwatch_logs_default.vpc_id
+
+  ingress_rules       = ["all-all"]
+  ingress_cidr_blocks = ["0.0.0.0/0"]
+  # ingress_rules       = ["https-443-tcp"]
+  # ingress_cidr_blocks = [var.on-premise-cidr, var.vpn_on_premise_cidr, var.vpn_basikon_host, var.vpc_cidr]
+
+  egress_rules       = ["all-all"]
+  egress_cidr_blocks = ["0.0.0.0/0"]
+}

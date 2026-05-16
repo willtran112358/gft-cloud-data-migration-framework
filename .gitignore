@@ -32,5 +32,10 @@ logs/
 *.log
 data/raw/
 data/processed/
+data-migration-infra-main.zip
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
 *.db
 migrations/logs/

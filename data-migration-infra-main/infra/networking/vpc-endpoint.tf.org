@@ -1,0 +1,52 @@
+module "athena_endpoints" {
+  source = "../modules/L2/vpc/modules/vpc-endpoints"
+
+  vpc_id             = module.vpc_with_flow_logs_cloudwatch_logs_default.vpc_id
+  security_group_ids = [module.vpc_endpoints_security_group.security_group_id]
+
+  endpoints = {
+    athena = {
+      service             = "athena"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc_with_flow_logs_cloudwatch_logs_default.private_subnets
+    },
+    execute-api = {
+      service    = "execute-api"
+      subnet_ids = module.vpc_with_flow_logs_cloudwatch_logs_default.private_subnets
+      tags       = { Name = "execute-api-vpc-endpoint" }
+    },
+    secretsmanager = {
+      service    = "secretsmanager"
+      subnet_ids = module.vpc_with_flow_logs_cloudwatch_logs_default.private_subnets
+      tags       = { Name = "execute-api-vpc-endpoint" }
+    }
+  }
+}
+
+module "s3_endpoint" {
+  source = "../modules/L2/vpc/modules/vpc-endpoints"
+
+  vpc_id             = module.vpc_with_flow_logs_cloudwatch_logs_default.vpc_id
+  security_group_ids = [module.vpc_endpoints_security_group.security_group_id]
+
+  endpoints = {
+    s3 = {
+      service = "s3"
+      # private_dns_enabled = true
+      subnet_ids = module.vpc_with_flow_logs_cloudwatch_logs_default.private_subnets
+    }
+  }
+}
+
+# resource "aws_vpc_endpoint" "ec2" {
+#   vpc_id            = module.vpc_with_flow_logs_cloudwatch_logs_default.vpc_id
+#   service_name      = "com.amazonaws.${var.region}.ec2"
+#   vpc_endpoint_type = "Interface"
+#   subnet_ids        = module.vpc_with_flow_logs_cloudwatch_logs_default.private_subnets
+
+#   security_group_ids = [
+#     module.vpc_endpoints_security_group.security_group_id
+#   ]
+
+#   private_dns_enabled = true
+# }

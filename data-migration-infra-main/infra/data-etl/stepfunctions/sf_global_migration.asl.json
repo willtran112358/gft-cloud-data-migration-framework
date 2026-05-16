@@ -1,0 +1,716 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Lambda Start Logs",
+  "States": {
+    "Lambda Start Logs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-start-stop-dates",
+        "Payload": {
+          "time_execution": "START",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Glue Job - Postgres to S3 (account)"
+    },
+    "Glue Job - Postgres to S3 (account)": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "gft-dm-postgres-to-s3",
+        "Arguments": {
+          "--table_name": "account"
+        }
+      },
+      "Next": "Step Function Invoke Crawler Account"
+    },
+    "Step Function Invoke Crawler Account": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "crawler_name": "crawler-account"
+        }
+      },
+      "Next": "Parallel"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "Next": "Parallel (1)",
+      "Branches": [
+        {
+          "StartAt": "Glue Job - Postgres to S3 (parameter_values_ca)",
+          "States": {
+            "Glue Job - Postgres to S3 (parameter_values_ca)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "parameter_values_sa"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Parameter Values CA"
+            },
+            "Step Function Invoke Crawler Parameter Values CA": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-parameter-values-ca"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (parameter_values_sa)",
+          "States": {
+            "Glue Job - Postgres to S3 (parameter_values_sa)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "parameter_values_sa"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Parameter Values SA"
+            },
+            "Step Function Invoke Crawler Parameter Values SA": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-parameter-values-sa"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (parameter_values_od)",
+          "States": {
+            "Glue Job - Postgres to S3 (parameter_values_od)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "parameter_values_od"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Parameter Values OD"
+            },
+            "Step Function Invoke Crawler Parameter Values OD": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-parameter-values-od"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (parameter_values_loan)",
+          "States": {
+            "Glue Job - Postgres to S3 (parameter_values_loan)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "parameter_values_loan"
+                }
+              },
+              "Next": "Step Function Invoke Crawler parameter_values_loan"
+            },
+            "Step Function Invoke Crawler parameter_values_loan": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-parameter-values-loan"
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Parallel (1)": {
+      "Type": "Parallel",
+      "Next": "Parallel (2)",
+      "Branches": [
+        {
+          "StartAt": "Glue Job - Postgres to S3 (blockade_ca)",
+          "States": {
+            "Glue Job - Postgres to S3 (blockade_ca)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "blockade_ca"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Blockade CA"
+            },
+            "Step Function Invoke Crawler Blockade CA": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-blockade-ca"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (blockade_sa)",
+          "States": {
+            "Glue Job - Postgres to S3 (blockade_sa)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "blockade_sa"
+                }
+              },
+              "Next": "Step Function Invoke Crawler Blockade SA"
+            },
+            "Step Function Invoke Crawler Blockade SA": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-blockade-sa"
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Parallel (2)": {
+      "Type": "Parallel",
+      "Next": "Parallel (3)",
+      "Branches": [
+        {
+          "StartAt": "Glue Job - Postgres to S3 (fixed_interest_rate_od)",
+          "States": {
+            "Glue Job - Postgres to S3 (fixed_interest_rate_od)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "fixed_interest_rate_od"
+                }
+              },
+              "Next": "Step Function Invoke Crawler fixed_interest_rate_od"
+            },
+            "Step Function Invoke Crawler fixed_interest_rate_od": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-fixed-interest-rate-od"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (fixed_interest_rate_loan)",
+          "States": {
+            "Glue Job - Postgres to S3 (fixed_interest_rate_loan)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "fixed_interest_rate_loan"
+                }
+              },
+              "Next": "Step Function Invoke Crawler fixed_interest_rate_loan"
+            },
+            "Step Function Invoke Crawler fixed_interest_rate_loan": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-fixed-interest-rate-loan"
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Parallel (3)": {
+      "Type": "Parallel",
+      "Next": "Parallel (4)",
+      "Branches": [
+        {
+          "StartAt": "Glue Job - Postgres to S3 (original_due_interest_dates_od)",
+          "States": {
+            "Glue Job - Postgres to S3 (original_due_interest_dates_od)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "original_due_interest_dates_od"
+                }
+              },
+              "Next": "Step Function Invoke Crawler original_due_interest_dates_od"
+            },
+            "Step Function Invoke Crawler original_due_interest_dates_od": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-original-due-interest-dates-od"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (original_due_interest_dates_loan)",
+          "States": {
+            "Glue Job - Postgres to S3 (original_due_interest_dates_loan)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "original_due_interest_dates_loan"
+                }
+              },
+              "Next": "Step Function Invoke Crawler original_due_interest_dates_loan"
+            },
+            "Step Function Invoke Crawler original_due_interest_dates_loan": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-original-due-interest-dates-loan"
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Parallel (4)": {
+      "Type": "Parallel",
+      "Next": "Step Functions Raw to Migration Account",
+      "Branches": [
+        {
+          "StartAt": "Glue Job - Postgres to S3 (original_due_principal_records_loan)",
+          "States": {
+            "Glue Job - Postgres to S3 (original_due_principal_records_loan)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "original_due_principal_records_loan"
+                }
+              },
+              "Next": "Step Function Invoke Crawler original_due_principal_records_loan"
+            },
+            "Step Function Invoke Crawler original_due_principal_records_loan": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-original-due-principal-records-loan"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (withdrawal_tracker_sa)",
+          "States": {
+            "Glue Job - Postgres to S3 (withdrawal_tracker_sa)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "withdrawal_tracker_sa"
+                }
+              },
+              "Next": "Step Function Invoke Crawler WT SA"
+            },
+            "Step Function Invoke Crawler WT SA": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-withdrawal-tracker-sa"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Glue Job - Postgres to S3 (auto_rollover_interest_schedule_plan_loan)",
+          "States": {
+            "Glue Job - Postgres to S3 (auto_rollover_interest_schedule_plan_loan)": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "gft-dm-postgres-to-s3",
+                "Arguments": {
+                  "--table_name": "auto_rollover_interest_schedule_plan_loan"
+                }
+              },
+              "Next": "Step Function Invoke Crawler auto_rollover_interest_schedule_plan_loan"
+            },
+            "Step Function Invoke Crawler auto_rollover_interest_schedule_plan_loan": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::states:startExecution.sync:2",
+              "Parameters": {
+                "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-crawler",
+                "Input": {
+                  "StatePayload": "Hello from Step Functions!",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+                  "crawler_name": "crawler-auto-rollover-interest-schedule-plan-loan"
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    },
+    "Step Functions Raw to Migration Account": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_account_raw_to_migration",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Next": "Parallel account history insertion"
+    },
+    "Parallel account history insertion": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Lambda History Raw Account",
+          "States": {
+            "Lambda History Raw Account": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "FunctionName": "gft-dm-lambda-history",
+                "Payload": {
+                  "table_name": "account",
+                  "database": "uat_rawdb",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Lambda History Staging Account",
+          "States": {
+            "Lambda History Staging Account": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "FunctionName": "gft-dm-lambda-history",
+                "Payload": {
+                  "table_name": "account",
+                  "database": "uat_staging",
+                  "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Athena Delete Retry Policy 0"
+    },
+    "Athena Delete Retry Policy 0": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Step Functions Execute Producer Account"
+    },
+    "Step Functions Execute Producer Account": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_deploying_job_producer_account",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "query": "SELECT * FROM AUX_ACCOUNT WHERE ID NOT IN (SELECT ID FROM MASTER_ACCOUNT)",
+          "size": "50"
+        }
+      },
+      "Next": "Step Functions StartExecution Retry Listener Account"
+    },
+    "Step Functions StartExecution Retry Listener Account": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_retry_listener",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "entity": "account"
+        }
+      },
+      "Next": "Lambda count master accounts",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Step Functions Execute Account Producer 2"
+        }
+      ]
+    },
+    "Lambda count master accounts": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-count-unreconcilied-entities",
+        "Payload": {
+          "executionId.$": "$$.Execution.Id",
+          "query": "SELECT count(*) FROM master_account "
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Choice (1)",
+      "ResultPath": "$.response"
+    },
+    "Choice (1)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.response.Payload.statusCode",
+            "NumericEquals": 200
+          },
+          "Next": "Lambda End Logs"
+        }
+      ],
+      "Default": "Athena Delete Retry Policy"
+    },
+    "Athena Delete Retry Policy": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Step Functions Global Reconciliation"
+    },
+    "Step Functions Global Reconciliation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_global_reconciliation",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Next": "Step Functions Crawlers Global Reconciliator"
+    },
+    "Step Functions Crawlers Global Reconciliator": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm-sf-invoke-all-crawler",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "functionality": "global-reconciliator"
+        }
+      },
+      "Next": "Lambda End Logs"
+    },
+    "Step Functions Execute Account Producer 2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "arn:aws:states:ap-southeast-1:699955796816:stateMachine:gft-dm_sf_deploying_job_producer_account",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "query": "SELECT * FROM AUX_ACCOUNT WHERE id not in (select id from reconciliation_account) and ID NOT IN (SELECT ID FROM MASTER_ACCOUNT)",
+          "size": "1"
+        }
+      },
+      "Next": "Athena Delete Retry Policy 3"
+    },
+    "Athena Delete Retry Policy 3": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "DELETE from uat_migrationdb.retry_policy",
+        "WorkGroup": "primary"
+      },
+      "Next": "Wait (1)"
+    },
+    "Wait (1)": {
+      "Type": "Wait",
+      "Seconds": 15,
+      "Next": "Step Functions StartExecution Retry Listener Account"
+    },
+    "Lambda End Logs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "gft-dm-lambda-start-stop-dates",
+        "Payload": {
+          "time_execution": "STOP",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "End": true
+    }
+  }
+}

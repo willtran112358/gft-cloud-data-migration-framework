@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: global-reconciliator-loan
+  namespace: dataloader
+spec:
+  template:
+    spec:
+      serviceAccountName: data-migration-services
+      imagePullSecrets:
+      - name: regcredb
+      containers:
+      - name: global-reconciliator-loan
+        image: global-reconciliator-api
+        imagePullPolicy: Always
+        env:
+          - name: ENTITY
+            value: "loan"        
+      restartPolicy: Never
+  backoffLimit: 0     

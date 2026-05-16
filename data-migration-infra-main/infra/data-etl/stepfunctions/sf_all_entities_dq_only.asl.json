@@ -1,0 +1,145 @@
+{
+  "Comment": "Execute all DQ Only Jobs",
+  "StartAt": "Step Functions StartExecution",
+  "States": {
+    "Step Functions StartExecution": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${sf_invoke_all_crawler}",
+        "Input": {
+          "StatePayload": "Hello from Step Functions!",
+          "AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$": "$$.Execution.Id",
+          "functionality": "csv-raw"
+        }
+      },
+      "Next": "Parallel"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "Customer Raw Staging",
+          "States": {
+            "Customer Raw Staging": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "customer-raw-to-staging"
+              },
+              "Next": "customer-job-dq-only"
+            },
+            "customer-job-dq-only": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$$.Execution.Id"
+                },
+                "JobName": "${name_job_customer}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Account Raw Staging",
+          "States": {
+            "Account Raw Staging": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "account-raw-to-staging"
+              },
+              "Next": "account-job-dq-only"
+            },
+            "account-job-dq-only": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$$.Execution.Id"
+                },
+                "JobName": "${name_job_account}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Posting Raw Staging",
+          "States": {
+            "Posting Raw Staging": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "posting-raw-to-staging"
+              },
+              "Next": "posting-job-dq-only"
+            },
+            "posting-job-dq-only": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$$.Execution.Id"
+                },
+                "JobName": "${name_job_posting}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Deposit Raw Staging",
+          "States": {
+            "Deposit Raw Staging": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "deposit-raw-to-staging"
+              },
+              "Next": "deposit-job-dq-only"
+            },
+            "deposit-job-dq-only": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$$.Execution.Id"
+                },
+                "JobName": "${name_job_deposit}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Loan Raw Staging",
+          "States": {
+            "Loan Raw Staging": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "loan-raw-to-staging"
+              },
+              "Next": "loan-job-dq-only"
+            },
+            "loan-job-dq-only": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "Arguments": {
+                  "--execution_id.$": "$$.Execution.Id"
+                },
+                "JobName": "${name_job_loan}"
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}
